@@ -18,7 +18,7 @@ if __name__ == '__main__':
         '--NUM_EPOCH',
         help = 'Number of examples to compute gradient over.',
         type = int,
-        default = 256
+        default = 20
     )
     parser.add_argument(
         '--BATCH_SIZE',
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         help = 'Hidden layer sizes to use for DNN feature columns -- provide space-separated layers',
         nargs = '+',
         type = int,
-        default=[128,64,32]
+        default=[256, 128, 64, 32]
     )
     parser.add_argument(
         '--MAX_STEPS',
@@ -54,14 +54,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '--LEARNING_RATE_LINEAR',
         help = 'Linear model learning rate',
-        type = int,
+        type = float,
         default=0.008
     )
     parser.add_argument(
         '--LEARNING_RATE_DNN',
         help = 'dnn model learning rate',
-        type = int,
-        default=0.008
+        type = float,
+        default=0.0008
     )
     parser.add_argument(
         '--model',
@@ -73,6 +73,7 @@ if __name__ == '__main__':
         help = 'GCS location to write checkpoints and export models',
         required = True
     )
+
     ## parse all arguments
     args = parser.parse_args()
     arguments = args.__dict__
@@ -94,12 +95,15 @@ if __name__ == '__main__':
     model.LEARNING_RATE_DNN = arguments.pop('LEARNING_RATE_DNN')
     model.model = arguments.pop('model')
     #model.TRAIN_STEPS = (arguments.pop('train_examples') * 1000) / model.BATCH_SIZE
-    #model.EVAL_STEPS = arguments.pop('eval_steps')    
+    #model.EVAL_STEPS = arguments.pop('eval_steps')
     print ("Will train for {} steps using batch_size={}".format(model.MAX_STEPS, model.BATCH_SIZE))
 
-    print ("Will use DNN size of {}".format(model.HIDDEN_UNITS))
+    if model.model == "linear":
+        print("Will use linear model")
+    else:
+        print ("Will use DNN size of {}".format(model.HIDDEN_UNITS))
 
     # Append trial_id to path if we are doing hptuning
- 
+
     # Run the training job
     model.train_and_evaluate(model.outdir, model.model)

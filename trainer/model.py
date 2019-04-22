@@ -2,7 +2,7 @@ import pandas as pd
 import tensorflow as tf
 
 from urllib.parse import urlparse
-from helpers_proc import extFind, process_date
+from helpers_proc import ext_find, process_date
 
 print(tf.__version__)
 
@@ -20,7 +20,7 @@ def add_more_features(input_df):
     df = input_df.copy()
 
     df['domain_temp'] = ""
-    df['domain_temp'] = df.url.apply(lambda row: extFind(row,True))
+    df['domain_temp'] = df.url.apply(lambda row: ext_find(row, True))
     df['url_length'] = df.url.apply(lambda row: len(row))
     df['query_string'] = df.url.apply(lambda row: urlparse(row).query if urlparse(row).query != '' else 'None')
     df['query_length'] = df.query_string.apply(lambda row: len(row))
@@ -35,6 +35,7 @@ def add_more_features(input_df):
     df = df.drop(["query_string", "primary", "domain_temp"], axis=1)
 
     return df
+
 
 # add more features to the train/eval/test datasets
 train_df = add_more_features(train_df)

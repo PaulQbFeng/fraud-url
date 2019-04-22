@@ -1,25 +1,30 @@
-import shutil
-import numpy as np
 import pandas as pd
 import tensorflow as tf
-import urllib.parse as urlparse
 
-from helpers_proc import primaryDomain, extFind, process_date
+from urllib.parse import urlparse
+from helpers_proc import extFind, process_date
+
 print(tf.__version__)
 
+
+# Read the train/eval/test csv datasets
 train_df = pd.read_csv('./train.csv', sep=',')
 eval_df = pd.read_csv('./eval.csv', sep=',')
 test_df = pd.read_csv('./test.csv', sep=',')
 
-def add_more_features(dataframe):
-    df = dataframe.copy()
+
+def add_more_features(input_df):
+    """
+    Create new features columns in the dataframe using the existing ones
+    """
+    df = input_df.copy()
 
     df['domain_temp'] = ""
     df['domain_temp'] = df.url.apply(lambda row: extFind(row,True))
     df['url_length'] = df.url.apply(lambda row: len(row))
-    df['query_string'] = df.url.apply(lambda row: urlparse.urlparse(row).query if urlparse.urlparse(row).query != '' else 'None')
+    df['query_string'] = df.url.apply(lambda row: urlparse(row).query if urlparse(row).query != '' else 'None')
     df['query_length'] = df.query_string.apply(lambda row: len(row))
-    df['primary'] = df.domain_temp.apply(lambda row: row[1] if row[0] in ['www','ww1','ww2'] else row[0])
+    df['primary'] = df.domain_temp.apply(lambda row: row[1] if row[0] in ['www', 'ww1', 'ww2'] else row[0])
     df['primary_length'] = df.primary.apply(lambda row: len(row))
     df['num_periods'] = df.url.apply(lambda row: row.count("."))
     df['num_exclam'] = df.url.apply(lambda row: row.count("!"))
@@ -27,15 +32,21 @@ def add_more_features(dataframe):
     df['num_perc'] = df.url.apply(lambda row: row.count("%"))
     df['num_numbers'] = df.url.apply(lambda row: sum(c.isdigit() for c in row))
     df['last_year_modified'] = process_date(df)
-    df = df.drop(["query_string","primary","domain_temp"], axis=1)
+    df = df.drop(["query_string", "primary", "domain_temp"], axis=1)
+
     return df
 
+# add more features to the train/eval/test datasets
 train_df = add_more_features(train_df)
 eval_df = add_more_features(eval_df)
 test_df = add_more_features(test_df)
 
 
 def get_vocabulary_list(category):
+    """For a given category (categorical column name e.g "serverType"),
+    the function returns the list of unique elements. This list as an argument in
+    tf.feature_column.categorical_column_with_vocabulary_list during the feature columns creation
+    """
     train_cat = list(train_df[category].unique())
     eval_cat = list(eval_df[category].unique())
     test_cat = list(test_df[category].unique())
@@ -45,39 +56,42 @@ def get_vocabulary_list(category):
 # Create pandas input function
 def make_train_input_fn(df, batch_size, num_epochs):
     return tf.estimator.inputs.pandas_input_fn(
-        x = df,
-        y = df['isHiddenFraudulent'],
-        batch_size = batch_size,
-        num_epochs = num_epochs,
-        shuffle = True,
-        queue_capacity = 1024,
-        num_threads = 1
+        x=df,
+        y=df['isHiddenFraudulent'],
+        batch_size=batch_size,
+        num_epochs=num_epochs,
+        shuffle=True,
+        queue_capacity=1024,
+        num_threads=1
     )
+
 
 def make_eval_input_fn(df, batch_size):
     return tf.estimator.inputs.pandas_input_fn(
-        x = df,
-        y = df['isHiddenFraudulent'],
-        batch_size = 256,
-        num_epochs = 1,
-        shuffle = False,
-        queue_capacity = 1024,
-        num_threads = 1
+        x=df,
+        y=df['isHiddenFraudulent'],
+        batch_size=256,
+        num_epochs=1,
+        shuffle=False,
+        queue_capacity=1024,
+        num_threads=1
     )
+
 
 def make_test_input_fn(df):
     return tf.estimator.inputs.pandas_input_fn(
-        x = df,
-        batch_size = 16,
-        num_epochs = 1,
-        shuffle = False,
-        queue_capacity = 1024,
-        num_threads = 1
+        x=df,
+        batch_size=16,
+        num_epochs=1,
+        shuffle=False,
+        queue_capacity=1024,
+        num_threads=1
     )
 
 
 num_int_features = ['url_length', 'contentLength', 'query_length', 'num_perc', 'primary_length']
 category_features = ['serverType', 'poweredBy', 'contentType', 'last_year_modified']
+
 
 def create_feature_cols(embedding=False, dnn=True):
 
@@ -86,7 +100,7 @@ def create_feature_cols(embedding=False, dnn=True):
     tf_fc_cat = tf.feature_column.categorical_column_with_vocabulary_list
     tf_fc_ind = tf.feature_column.indicator_column
 
-    num_cols = [tf_fc_num(col) for col in num_int_features]
+    num_cols = [tf_fc_num(col) for col in num_int_features]  # TODO try bucketize url_length 5
     cat_cols = [tf_fc_cat(key=col,
                           vocabulary_list=get_vocabulary_list(col)) for col in category_features]
     if embedding:
@@ -95,9 +109,10 @@ def create_feature_cols(embedding=False, dnn=True):
         cat_cols = [tf_fc_ind(col) for col in cat_cols]
     cols = num_cols + cat_cols
 
-    #try bucketize url_length 5
     return cols
 
+
+# tensorflow feature columns creation
 feature_cols = create_feature_cols(embedding=False, dnn=True)
 
 
@@ -118,9 +133,8 @@ def serving_input_fn():
 
     return tf.estimator.export.ServingInputReceiver(features, json_feature_placeholders)
 
+
 # Create estimator train and evaluate function
-
-
 def train_and_evaluate(output_dir, model='linear'):
 
     run_config = tf.estimator.RunConfig(model_dir=output_dir,
@@ -129,12 +143,12 @@ def train_and_evaluate(output_dir, model='linear'):
                                         save_checkpoints_steps=SAVE_CKPT_STEPS)
 
     if model == 'linear':
-#         optimizer = tf.train.FtrlOptimizer(learning_rate=lr)
+        optimizer = tf.train.FtrlOptimizer(learning_rate=LEARNING_RATE_LINEAR)
         estimator = tf.estimator.LinearClassifier(feature_columns=feature_cols,
-                                                  optimizer=tf.train.FtrlOptimizer(learning_rate=LEARNING_RATE_LINEAR),
+                                                  optimizer=optimizer,
                                                   config=run_config)
     else:
-#         optimizer = tf.train.ProximalAdagradOptimizer(learning_rate=LEARNING_RATE_DNN)
+        # optimizer = tf.train.ProximalAdagradOptimizer(learning_rate=LEARNING_RATE_DNN)
         optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE_DNN)
 
         estimator = tf.estimator.DNNClassifier(feature_columns=feature_cols,

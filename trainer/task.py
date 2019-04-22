@@ -1,80 +1,74 @@
-import argparse
-import json
-import os
-
 import model
-
-import tensorflow as tf
-
+import argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--BUCKET',
-        help = 'GCS path to data. We assume that data is in gs://BUCKET/babyweight/preproc/',
-        required = False
+        help='GCS path to data. We assume that data is in gs://BUCKET/babyweight/preproc/',
+        required=False
     )
     parser.add_argument(
         '--NUM_EPOCH',
-        help = 'Number of examples to compute gradient over.',
-        type = int,
-        default = 20
+        help='Number of examples to compute gradient over.',
+        type=int,
+        default=20
     )
     parser.add_argument(
         '--BATCH_SIZE',
-        help = 'Number of examples to compute gradient over.',
-        type = int,
-        default = 256
+        help='Number of examples to compute gradient over.',
+        type=int,
+        default=256
     )
     parser.add_argument(
         '--SAVE_CKPT_STEPS',
-        help = 'Number of set to commpute before check points',
-        type = int,
-        default = 200
+        help='Number of set to commpute before check points',
+        type=int,
+        default=200
     )
     parser.add_argument(
         '--EVAL_INTERVAL_SEC',
-        help = 'Positive number of steps for which to evaluate model. Default to None, which means to evaluate until input_fn raises an end-of-input exception',
-        type = int,
-        default = 5
+        help='Positive number of steps for which to evaluate model',
+        type=int,
+        default=5
     )
     parser.add_argument(
         '--HIDDEN_UNITS',
-        help = 'Hidden layer sizes to use for DNN feature columns -- provide space-separated layers',
-        nargs = '+',
-        type = int,
+        help='Hidden layer sizes to use for DNN feature columns -- provide space-separated layers',
+        nargs='+',
+        type=int,
         default=[256, 128, 64, 32]
     )
     parser.add_argument(
         '--MAX_STEPS',
-        help = '',
-        type = int,
+        help='',
+        type=int,
         default=12000
     )
     parser.add_argument(
         '--LEARNING_RATE_LINEAR',
-        help = 'Linear model learning rate',
-        type = float,
+        help='Linear model learning rate',
+        type=float,
         default=0.008
     )
     parser.add_argument(
         '--LEARNING_RATE_DNN',
-        help = 'dnn model learning rate',
-        type = float,
+        help='dnn model learning rate',
+        type=float,
         default=0.0008
     )
     parser.add_argument(
         '--model',
-        help = 'GCS location to write checkpoints and export models',
-        required = True
+        help='GCS location to write checkpoints and export models',
+        required=True
     )
     parser.add_argument(
         '--outdir',
-        help = 'GCS location to write checkpoints and export models',
-        required = True
+        help='GCS location to write checkpoints and export models',
+        required=True
     )
 
-    ## parse all arguments
+    # parse all arguments
     args = parser.parse_args()
     arguments = args.__dict__
 
@@ -82,7 +76,7 @@ if __name__ == '__main__':
     arguments.pop('job_dir', None)
     arguments.pop('job-dir', None)
 
-    ## assign the arguments to the model variables
+    # assign the arguments to the model variables
     model.outdir = arguments.pop('outdir')
     model.BUCKET = arguments.pop('BUCKET')
     model.NUM_EPOCH = arguments.pop('NUM_EPOCH')
@@ -94,14 +88,14 @@ if __name__ == '__main__':
     model.LEARNING_RATE_LINEAR = arguments.pop('LEARNING_RATE_LINEAR')
     model.LEARNING_RATE_DNN = arguments.pop('LEARNING_RATE_DNN')
     model.model = arguments.pop('model')
-    #model.TRAIN_STEPS = (arguments.pop('train_examples') * 1000) / model.BATCH_SIZE
-    #model.EVAL_STEPS = arguments.pop('eval_steps')
-    print ("Will train for {} steps using batch_size={}".format(model.MAX_STEPS, model.BATCH_SIZE))
+    # model.TRAIN_STEPS = (arguments.pop('train_examples') * 1000) / model.BATCH_SIZE
+    # model.EVAL_STEPS = arguments.pop('eval_steps')
+    print("Will train for {} steps using batch_size={}".format(model.MAX_STEPS, model.BATCH_SIZE))
 
     if model.model == "linear":
         print("Will use linear model")
     else:
-        print ("Will use DNN size of {}".format(model.HIDDEN_UNITS))
+        print("Will use DNN size of {}".format(model.HIDDEN_UNITS))
 
     # Append trial_id to path if we are doing hptuning
 

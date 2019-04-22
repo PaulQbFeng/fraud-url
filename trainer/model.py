@@ -131,7 +131,7 @@ def train_and_evaluate(output_dir, model='linear'):
     if model == 'linear':
 #         optimizer = tf.train.FtrlOptimizer(learning_rate=lr)
         estimator = tf.estimator.LinearClassifier(feature_columns=feature_cols,
-                                                   optimizer=tf.train.FtrlOptimizer(learning_rate=LEARNING_RATE_LINEAR),
+                                                  optimizer=tf.train.FtrlOptimizer(learning_rate=LEARNING_RATE_LINEAR),
                                                   config=run_config)
     else:
 #         optimizer = tf.train.ProximalAdagradOptimizer(learning_rate=LEARNING_RATE_DNN)
